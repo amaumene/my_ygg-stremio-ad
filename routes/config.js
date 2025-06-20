@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { getConfig } = require('../utils/helpers');
-const logger = require('../utils/logger'); // Import du logger
+const logger = require('../utils/logger');
 
 const router = express.Router();
 

@@ -1,6 +1,17 @@
 const axios = require('axios');
 const FormData = require('form-data');
-const logger = require('../utils/logger'); // Import the logger
+const logger = require('../utils/logger');
+const { storeMagnet, getAllMagnets, deleteMagnet } = require('../utils/db');
+
+let cleanupTimeout = null;
+
+// Schedule cleanup of old magnets
+function scheduleCleanup(config, delayMs = 1 * 60 * 1000) {
+  if (cleanupTimeout) clearTimeout(cleanupTimeout);
+  cleanupTimeout = setTimeout(() => {
+    cleanupOldMagnets(config);
+  }, delayMs);
+}
 
 // Upload magnets to AllDebrid
 async function uploadMagnets(magnets, config) {
@@ -23,20 +34,33 @@ async function uploadMagnets(magnets, config) {
     if (response.data.status === "success") {
       logger.info(`✅ Successfully uploaded ${response.data.data.magnets.length} magnets.`);
       logger.debug(JSON.stringify(response.data, null, 2));
+      scheduleCleanup(config);
+      for (const magnet of response.data.data.magnets) {
+        await storeMagnet(magnet.id, magnet.hash, magnet.name);
+      }
       return response.data.data.magnets.map(magnet => ({
         hash: magnet.hash,
         ready: magnet.ready ? '✅ Ready' : '❌ Not ready',
         name: magnet.name,
         size: magnet.size,
         id: magnet.id,
-        source: magnets.find(m => m.hash === magnet.hash)?.source || "Unknown" // Ajout de la source
+        source: magnets.find(m => m.hash === magnet.hash)?.source || "Unknown"
       }));
     } else {
-      logger.warn("❌ Error uploading magnets:", response.data.data);
+      // Log status, error code and message if present
+      const { status, error } = response.data;
+      if (error && error.code && error.message) {
+        logger.error(`❌ Error uploading magnets: status=${status}, code=${error.code}, message=${error.message}`);
+      } else {
+        logger.warn(`❌ Error uploading magnets: ${JSON.stringify(response.data, null, 2)}`);
+      }
+      scheduleCleanup(config);
       return [];
     }
   } catch (error) {
     logger.error("❌ Upload error:", error.response?.data || error.message);
+    logger.debug("AllDebrid upload error full response:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    scheduleCleanup(config);
     return [];
   }
 }
@@ -127,4 +151,43 @@ async function unlockFileLink(fileLink, config) {
   }
 }
 
-module.exports = { uploadMagnets, getFilesFromMagnetId, unlockFileLink };
+// Delete the 10 oldest magnets if total > 500
+async function cleanupOldMagnets(config, maxCount = 500, deleteCount = 10) {
+  try {
+    const magnets = await getAllMagnets();
+    logger.debug(`🔢 Magnets in SQLite: ${magnets.length}`);
+    if (magnets.length > maxCount) {
+      const toDelete = magnets.slice(0, deleteCount);
+      logger.info(`🧹 Deleting ${toDelete.length} oldest magnets (limit: ${deleteCount}) because total > ${maxCount}.`);
+
+      // Prepare formData with multiple ids[]
+      const formData = new FormData();
+      toDelete.forEach(magnet => formData.append('ids[]', magnet.id));
+
+      const url = `https://api.alldebrid.com/v4/magnet/delete?apikey=${config.API_KEY_ALLEDBRID}`;
+      try {
+        const response = await axios.post(url, formData, {
+          headers: {
+            "Authorization": `Bearer ${config.API_KEY_ALLEDBRID}`,
+            ...formData.getHeaders()
+          }
+        });
+        if (response.data.status === "success") {
+          logger.info(`🗑️ Deleted magnets: ${toDelete.map(m => m.name || m.id).join(', ')}`);
+          // Remove from DB
+          for (const magnet of toDelete) {
+            await deleteMagnet(magnet.id);
+          }
+        } else {
+          logger.warn(`❌ Failed to delete magnets: ${JSON.stringify(response.data, null, 2)}`);
+        }
+      } catch (err) {
+        logger.error(`❌ Error deleting magnets: ${err.message}`);
+      }
+    }
+  } catch (err) {
+    logger.error("❌ Error during magnet cleanup:", err.message);
+  }
+}
+
+module.exports = { uploadMagnets, getFilesFromMagnetId, unlockFileLink, cleanupOldMagnets };

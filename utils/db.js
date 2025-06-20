@@ -4,7 +4,7 @@ const path = require('path');
 // Initialize the database
 const db = new sqlite3.Database(path.join('/data', 'streams.db'));
 
-// Create the table for TMDB cache if it doesn't exist
+// Create the tables if they don't exist
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS tmdb_cache (
@@ -13,6 +13,15 @@ db.serialize(() => {
       title TEXT,
       french_title TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS magnets (
+      id TEXT PRIMARY KEY,
+      hash TEXT,
+      name TEXT,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 });
@@ -49,4 +58,53 @@ function storeTmdb(imdbId, type, title, frenchTitle) {
   });
 }
 
-module.exports = { db, getCachedTmdb, storeTmdb };
+// Store a magnet
+function storeMagnet(id, hash, name) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT OR REPLACE INTO magnets (id, hash, name, added_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
+      [id, hash, name],
+      function (err) {
+        if (err) return reject(err);
+        resolve();
+      }
+    );
+  });
+}
+
+// Get all magnets sorted by oldest first
+function getAllMagnets() {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT * FROM magnets ORDER BY added_at ASC`,
+      [],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      }
+    );
+  });
+}
+
+// Delete a magnet by id
+function deleteMagnet(id) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `DELETE FROM magnets WHERE id = ?`,
+      [id],
+      function (err) {
+        if (err) return reject(err);
+        resolve();
+      }
+    );
+  });
+}
+
+module.exports = {
+  db,
+  getCachedTmdb,
+  storeTmdb,
+  storeMagnet,
+  getAllMagnets,
+  deleteMagnet
+};

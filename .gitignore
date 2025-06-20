@@ -1,5 +1,6 @@
 node_modules/
-
+.vscode/
 ssl/server.key
 ssl/server.cert
 data/streams.db
+docker-compose.override.yml
