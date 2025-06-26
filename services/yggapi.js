@@ -117,19 +117,19 @@ async function searchYgg(title, type, season, episode, config, titleFR = null) {
 
 async function performSearch(searchTitle, type, config) {
   const categoryIds = type === "movie" 
-    ? [2178, 2183]
-    : [2179, 2184];
+    ? [2178, 2181, 2183]
+    : [2179, 2181, 2182, 2184];
 
   const categoryParams = categoryIds.map(id => `category_id=${id}`).join('&');
   const requestUrl = `https://yggapi.eu/torrents?q=${encodeURIComponent(searchTitle)}&page=1&per_page=100&order_by=uploaded_at&${categoryParams}`;
 
-  logger.debug(`🔍 Performing search with URL: ${requestUrl}`);
+  logger.debug(`🔍 Performing YGG search with URL: ${requestUrl}`);
 
   try {
     const response = await axios.get(requestUrl);
     let torrents = response.data || [];
 
-    // torrents.sort((a, b) => (b.seeders || 0) - (a.seeders || 0));
+    logger.info(`✅ Found ${torrents.length} torrents on YggTorrent for "${searchTitle}".`);
 
     torrents.sort((a, b) => {
       const priorityA = prioritizeTorrent(a, config);
