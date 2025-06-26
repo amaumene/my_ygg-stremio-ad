@@ -1,8 +1,8 @@
 # Use an official Node.js image
-FROM node:18
+FROM node:alpine
 
 # Install OpenSSL to manage SSL certificates
-RUN apt-get update && apt-get install -y openssl
+# RUN apt-get update && apt-get install -y openssl
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -27,4 +27,4 @@ RUN chmod +x /init-ssl.sh
 EXPOSE 5000
 
 # Run the initialization script and then start the application
-CMD ["/bin/bash", "/init-ssl.sh", "node", "index.js"]
+CMD ["/bin/sh", "/init-ssl.sh", "node", "index.js"]

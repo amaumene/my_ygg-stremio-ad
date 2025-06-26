@@ -118,7 +118,7 @@ async function searchYgg(title, type, season, episode, config, titleFR = null) {
 async function performSearch(searchTitle, type, config) {
   const categoryIds = type === "movie" 
     ? [2178, 2183]
-    : [2179, 2184];
+    : [2179, 2184, 2182];
 
   const categoryParams = categoryIds.map(id => `category_id=${id}`).join('&');
   const requestUrl = `https://yggapi.eu/torrents?q=${encodeURIComponent(searchTitle)}&page=1&per_page=100&order_by=uploaded_at&${categoryParams}`;

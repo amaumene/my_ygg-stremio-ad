@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Paths to SSL files
 KEY_PATH="/etc/ssl/private/server.key"
@@ -13,8 +13,8 @@ if [ ! -f "$KEY_PATH" ] || [ ! -f "$CERT_PATH" ]; then
     echo "Downloading SSL certificates..."
 
     # Download the files
-    curl -s -o "$KEY_PATH" "$KEY_URL"
-    curl -s -o "$CERT_PATH" "$CERT_URL"
+    wget -O "$KEY_PATH" "$KEY_URL"
+    wget -O "$CERT_PATH" "$CERT_URL"
 
     # Verify if the files were successfully downloaded
     if [ -f "$KEY_PATH" ] && [ -f "$CERT_PATH" ]; then
