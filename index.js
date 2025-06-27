@@ -1,5 +1,5 @@
 const express = require('express');
-const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const manifestRoutes = require('./routes/manifest');
 const streamRoutes = require('./routes/stream');
@@ -21,11 +21,11 @@ app.use('/', manifestRoutes);
 app.use('/', streamRoutes);
 
 // Start the HTTPS server
-const sslOptions = {
-  key: fs.readFileSync('/etc/ssl/private/server.key'),
-  cert: fs.readFileSync('/etc/ssl/certs/server.pem')
-};
+// const sslOptions = {
+//   key: fs.readFileSync('/etc/ssl/private/server.key'),
+//   cert: fs.readFileSync('/etc/ssl/certs/server.pem')
+// };
 
-https.createServer(sslOptions, app).listen(PORT, () => {
-  logger.info(`✅ HTTPS server running on port ${PORT}`);
+http.createServer(app).listen(PORT, () => {
+  logger.info(`✅ HTTP server running on port ${PORT}`);
 });
