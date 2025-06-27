@@ -18,9 +18,9 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS magnets (
-      id TEXT PRIMARY KEY,
-      hash TEXT,
-      name TEXT,
+      id TEXT PRIMARY KEY NOT NULL,
+      hash TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
       added_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -61,6 +61,9 @@ function storeTmdb(imdbId, type, title, frenchTitle) {
 // Store a magnet
 function storeMagnet(id, hash, name) {
   return new Promise((resolve, reject) => {
+    if (!id || !hash || !name) {
+      return reject(new Error('id, hash, and name must not be null or empty'));
+    }
     db.run(
       `INSERT OR REPLACE INTO magnets (id, hash, name, added_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
       [id, hash, name],
