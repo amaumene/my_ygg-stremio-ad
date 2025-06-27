@@ -1,22 +1,25 @@
-# Use an official Node.js image
-FROM node:alpine
+FROM alpine AS builder
 
-# Set the working directory inside the container
-WORKDIR /app
+RUN apk add --no-cache nodejs npm python3 py3-setuptools make gcc g++ musl-dev sqlite-static sqlite-dev
 
-# Copy package.json and package-lock.json (if present)
+WORKDIR /build
+
+RUN npm set prefix=/build
+
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
-
-# Copy the entire application code into the container
 COPY . .
 
-RUN mkdir /data
+RUN npm install --omit dev --build-from-source --sqlite=/usr/lib
 
-# Expose the port used by the application (here, 5000)
+FROM alpine
+
+RUN apk add --no-cache nodejs
+
+WORKDIR /app
+
+COPY --from=builder /build /app
+
 EXPOSE 5000
 
-# Run the initialization script and then start the application
 CMD ["node", "index.js"]
